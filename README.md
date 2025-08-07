@@ -60,7 +60,7 @@ Want to get in touch or collaborate?
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/madebyirfan/sketchmind.git
+git clone https://github.com/madebyirfan/sketch-mind.git
 cd sketchmind
 npm install
 npm run dev

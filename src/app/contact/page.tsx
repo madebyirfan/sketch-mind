@@ -1,15 +1,10 @@
 'use client'
 
-import { useEffect, useState, useActionState } from 'react'
+import { useState } from 'react'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import Image from 'next/image'
-import submitContactForm from './actions'
 
 export default function ContactPage() {
-  const initialState = { message: '', errors: {} as Record<string, string> }
-  const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
-
-  // New local states
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,8 +12,9 @@ export default function ContactPage() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [responseMessage, setResponseMessage] = useState('')
 
-  // Update local state and clear error on change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -31,12 +27,32 @@ export default function ContactPage() {
     }
   }
 
-  // Sync server errors into local state on submission
-  useEffect(() => {
-    if (state.errors) {
-      setErrors(state.errors)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setErrors({})
+    setResponseMessage('')
+
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setErrors(data.errors || {})
+      setResponseMessage(data.message || 'Something went wrong.')
+    } else {
+      setResponseMessage(data.message || 'Message sent successfully!')
+      setFormData({ name: '', email: '', message: '' })
     }
-  }, [state])
+
+    setIsSubmitting(false)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fff4e6] via-[#ffe8cc] to-[#fff0d9] px-6 py-40 md:px-20">
@@ -73,7 +89,7 @@ export default function ContactPage() {
         </div>
 
         {/* Contact Form */}
-        <form action={formAction} className="bg-white rounded-xl shadow-lg p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8 space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
               Name
@@ -87,9 +103,7 @@ export default function ContactPage() {
               onChange={handleChange}
               className={`w-full border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500`}
             />
-            {errors.name && (
-              <p className="text-sm text-red-600 mt-1">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
           </div>
 
           <div>
@@ -105,9 +119,7 @@ export default function ContactPage() {
               onChange={handleChange}
               className={`w-full border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500`}
             />
-            {errors.email && (
-              <p className="text-sm text-red-600 mt-1">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
           </div>
 
           <div>
@@ -123,21 +135,21 @@ export default function ContactPage() {
               onChange={handleChange}
               className={`w-full border ${errors.message ? 'border-red-500' : 'border-gray-300'} rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500`}
             />
-            {errors.message && (
-              <p className="text-sm text-red-600 mt-1">{errors.message}</p>
-            )}
+            {errors.message && <p className="text-sm text-red-600 mt-1">{errors.message}</p>}
           </div>
 
           <button
             type="submit"
             className="bg-orange-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-orange-700 transition"
-            disabled={isPending}
+            disabled={isSubmitting}
           >
-            {isPending ? 'Sending...' : 'Send Message'}
+            {isSubmitting ? 'Sending...' : 'Send Message'}
           </button>
 
-          {state.message && (
-            <p className="text-green-600 text-sm mt-3">{state.message}</p>
+          {responseMessage && (
+            <p className={`text-sm mt-3 ${errors.message ? 'text-red-600' : 'text-green-600'}`}>
+              {responseMessage}
+            </p>
           )}
         </form>
       </div>
